@@ -1,0 +1,199 @@
+{
+  "name": "WebDev AI Client Agent Template",
+  "flow": [
+    {
+      "id": 1,
+      "module": "telegram-bot-sdk:TriggerNewUpdates",
+      "version": 1,
+      "parameters": {
+        "hookId": "YOUR_WEBHOOK_ID"
+      },
+      "mapper": {},
+      "metadata": {
+        "designer": { "x": -200, "y": 0 },
+        "restore": {
+          "parameters": {
+            "hookId": {
+              "label": "Your Telegram Bot Webhook"
+            }
+          }
+        },
+        "expect": [
+          { "name": "message", "type": "collection" }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "module": "builtin:BasicFeeder",
+      "version": 1,
+      "parameters": {},
+      "mapper": {
+        "array": "{{1.message}}"
+      },
+      "metadata": {
+        "designer": { "x": 0, "y": 0 }
+      }
+    },
+    {
+      "id": 3,
+      "module": "airtable:ActionSearchRecords",
+      "version": 3,
+      "parameters": {
+        "base": "YOUR_AIRTABLE_BASE_ID",
+        "table": "ChatMemory"
+      },
+      "mapper": {
+        "filterByFormula": "{{\"FIND('\" + 2.chat.id + \"', {chatId}) > 0\"}}"
+      },
+      "metadata": {
+        "designer": { "x": 200, "y": 0 },
+        "restore": {
+          "parameters": {
+            "base": { "label": "YOUR_AIRTABLE_BASE_ID" },
+            "table": { "label": "ChatMemory" }
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "module": "http:ActionSendData",
+      "version": 3,
+      "parameters": {
+        "handleErrors": false,
+        "useNewZLibDeCompress": true
+      },
+      "mapper": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=YOUR_GEMINI_API_KEY",
+        "method": "POST",
+        "headers": [
+          { "name": "Content-Type", "value": "application/json" }
+        ],
+        "bodyType": "raw",
+        "contentType": "application/json",
+        "body": "{\n  \"contents\": [\n    {\n      \"role\": \"user\",\n      \"parts\": [{ \"text\": \"SYSTEM PROMPT:\\nYou are [AGENT_NAME], a professional client intake assistant for [YOUR_FULL_NAME], a [YOUR_PROFESSION] from [YOUR_CITY], [YOUR_COUNTRY].\\n\\n=== ABOUT YOU ===\\nFull Name: [YOUR_FULL_NAME]\\nAlso known as: [YOUR_NICKNAME]\\nLocation: [YOUR_CITY], [YOUR_COUNTRY]\\nEmail: [YOUR_EMAIL]\\nPhone: [YOUR_PHONE]\\nGitHub: [YOUR_GITHUB_URL]\\nPortfolio: [YOUR_PORTFOLIO_URL]\\n\\n=== SERVICES & PRICING ===\\n- [SERVICE_1]: $[MIN]-$[MAX]\\n- [SERVICE_2]: $[MIN]-$[MAX]\\n- [SERVICE_3]: $[MIN]-$[MAX]\\n- [SERVICE_4]: $[MIN]-$[MAX]\\n- [SERVICE_5]: $[MIN]-$[MAX]/hr\\n\\n=== TIMELINE ===\\n- [SERVICE_1]: [X]-[Y] days\\n- [SERVICE_2]: [X]-[Y] days\\n- [SERVICE_3]: [X]-[Y] days\\n- Timeline varies based on complexity\\n\\n=== FEATURED PROJECTS ===\\n1. [PROJECT_1_NAME] - [PROJECT_1_DESC]: [PROJECT_1_URL]\\n2. [PROJECT_2_NAME] - [PROJECT_2_DESC]: [PROJECT_2_URL]\\n3. [PROJECT_3_NAME] - [PROJECT_3_DESC]: [PROJECT_3_URL]\\n\\n=== BEHAVIOR ===\\n- Be warm, professional, and friendly\\n- Greet client by first name on first message\\n- Never ask something already answered\\n- Collect info ONE question at a time in this order:\\n  1. Full name\\n  2. Type of business\\n  3. Type of website or service needed\\n  4. Specific features needed\\n  5. Budget range in USD\\n  6. Expected timeline or deadline\\n  7. Email address\\n  8. WhatsApp or phone number\\n- After all 8 collected, say INTAKE_COMPLETE first, then thank the client warmly\\n- If asked pricing, give the range above\\n- If asked to see work, share relevant project links\\n- If asked something you do not know, say you will pass it to [YOUR_NICKNAME]\\n- Never make promises you cannot keep\\n- If client seems hesitant about budget, reassure them you are flexible\\n- Speak in the language the client uses\\n- Keep responses concise and conversational\\n\\nClient first name: {{2.from.first_name}}\\nConversation history: {{if(3.records[]; join(map(3.records[]; history); ' | '); 'No history yet')}}\\n\\nLatest client message: {{2.text}}\" }]\n    }\n  ]\n}"
+      },
+      "metadata": {
+        "designer": { "x": 400, "y": 0 }
+      }
+    },
+    {
+      "id": 5,
+      "module": "airtable:ActionUpsertRecord",
+      "version": 3,
+      "parameters": {
+        "base": "YOUR_AIRTABLE_BASE_ID",
+        "table": "ChatMemory"
+      },
+      "mapper": {
+        "fields": {
+          "chatId": "{{2.chat.id}}",
+          "history": "{{if(3.records[]; 3.records[].history + ' | User: ' + 2.text + ' | Agent: ' + 4.data.candidates[].content.parts[].text; 'User: ' + 2.text + ' | Agent: ' + 4.data.candidates[].content.parts[].text)}}",
+          "firstName": "{{2.from.first_name}}"
+        },
+        "typecast": false
+      },
+      "metadata": {
+        "designer": { "x": 600, "y": 0 },
+        "restore": {
+          "parameters": {
+            "base": { "label": "YOUR_AIRTABLE_BASE_ID" },
+            "table": { "label": "ChatMemory" }
+          }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "module": "telegram-bot-sdk:ActionSendMessage",
+      "version": 1,
+      "parameters": {},
+      "mapper": {
+        "chatId": "{{2.chat.id}}",
+        "text": "{{4.data.candidates[].content.parts[].text}}",
+        "parseMode": "Text"
+      },
+      "metadata": {
+        "designer": { "x": 800, "y": 0 }
+      }
+    },
+    {
+      "id": 7,
+      "module": "builtin:BasicFilter",
+      "version": 1,
+      "parameters": {},
+      "mapper": {},
+      "filter": {
+        "name": "Check if intake complete",
+        "conditions": [
+          [
+            {
+              "a": "{{4.data.candidates[].content.parts[].text}}",
+              "b": "INTAKE_COMPLETE",
+              "o": "text:contain"
+            }
+          ]
+        ]
+      },
+      "metadata": {
+        "designer": { "x": 1000, "y": 0 }
+      }
+    },
+    {
+      "id": 8,
+      "module": "http:ActionSendData",
+      "version": 3,
+      "parameters": {
+        "handleErrors": false,
+        "useNewZLibDeCompress": true
+      },
+      "mapper": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=YOUR_GEMINI_API_KEY",
+        "method": "POST",
+        "headers": [
+          { "name": "Content-Type", "value": "application/json" }
+        ],
+        "bodyType": "raw",
+        "contentType": "application/json",
+        "body": "{\n  \"contents\": [\n    {\n      \"role\": \"user\",\n      \"parts\": [{ \"text\": \"Based on this conversation history, extract the client information and generate a professional Project Requirements Document (PRD).\\n\\nConversation history:\\n{{3.records[].history}}\\n\\nFirst, extract and format the client data as JSON:\\n{\\\"name\\\": \\\"\\\", \\\"business\\\": \\\"\\\", \\\"serviceNeeded\\\": \\\"\\\", \\\"features\\\": \\\"\\\", \\\"budget\\\": \\\"\\\", \\\"timeline\\\": \\\"\\\", \\\"email\\\": \\\"\\\", \\\"phone\\\": \\\"\\\"}\\n\\nThen write a professional PRD with these sections:\\n1. Project Overview\\n2. Client Information\\n3. Project Scope\\n4. Features Required\\n5. Budget & Timeline\\n6. Technical Recommendations\\n7. Next Steps\" }]\n    }\n  ]\n}"
+      },
+      "metadata": {
+        "designer": { "x": 1200, "y": 0 }
+      }
+    },
+    {
+      "id": 9,
+      "module": "telegram-bot-sdk:ActionSendMessage",
+      "version": 1,
+      "parameters": {},
+      "mapper": {
+        "chatId": "YOUR_PERSONAL_TELEGRAM_CHAT_ID",
+        "text": "🚨 NEW CLIENT LEAD 🚨\n\n📋 PRD & CLIENT DATA:\n{{substring(8.data.candidates[].content.parts[].text; 0; 4000)}}\n\n━━━━━━━━━━━━━━━━━━━━\n⚡ Reply ASAP — fast response wins the client!",
+        "parseMode": "Text"
+      },
+      "metadata": {
+        "designer": { "x": 1400, "y": 0 }
+      }
+    }
+  ],
+  "metadata": {
+    "instant": true,
+    "version": 1,
+    "scenario": {
+      "roundtrips": 1,
+      "maxErrors": 3,
+      "autoCommit": true,
+      "autoCommitTriggerLast": true,
+      "sequential": false,
+      "confidential": false,
+      "dataloss": false,
+      "dlq": false,
+      "freshVariables": false
+    },
+    "designer": {
+      "orphans": []
+    },
+    "zone": "eu1.make.com"
+  }
+}

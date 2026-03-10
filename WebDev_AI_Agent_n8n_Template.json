@@ -1,0 +1,453 @@
+{
+  "name": "WebDev AI Client Agent Template",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [
+        -2080,
+        512
+      ],
+      "id": "e17481af-965a-42cf-ba9a-63801f8a6ba8",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "YOUR_TELEGRAM_BOT_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "userMessage",
+              "value": "={{$json[\"message\"][\"text\"]}}"
+            },
+            {
+              "name": "chatId",
+              "value": "={{$json[\"message\"][\"chat\"][\"id\"]}}"
+            },
+            {
+              "name": "firstName",
+              "value": "={{$json[\"message\"][\"from\"][\"first_name\"]}}"
+            },
+            {
+              "name": "sessionId",
+              "value": "={{$json[\"message\"][\"chat\"][\"id\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Extract Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        -1856,
+        512
+      ],
+      "id": "12a1e7ba-733f-49ac-a8fd-327e28b2863e"
+    },
+    {
+      "parameters": {
+        "text": "={{$json[\"userMessage\"]}}",
+        "options": {
+          "systemMessage": "You are [AGENT_NAME], a professional client intake assistant for [YOUR_FULL_NAME], a [YOUR_PROFESSION] from [YOUR_CITY], [YOUR_COUNTRY].\n\n=== ABOUT YOU ===\nFull Name: [YOUR_FULL_NAME]\nAlso known as: [YOUR_NICKNAME]\nLocation: [YOUR_CITY], [YOUR_COUNTRY]\nEmail: [YOUR_EMAIL]\nPhone: [YOUR_PHONE]\nGitHub: [YOUR_GITHUB_URL]\nPortfolio: [YOUR_PORTFOLIO_URL]\n\n=== SERVICES & PRICING ===\n- [SERVICE_1]: $[MIN]-$[MAX]\n- [SERVICE_2]: $[MIN]-$[MAX]\n- [SERVICE_3]: $[MIN]-$[MAX]\n- [SERVICE_4]: $[MIN]-$[MAX]\n- [SERVICE_5]: $[MIN]-$[MAX]/hr\n\n=== TIMELINE ===\n- [SERVICE_1]: [X]-[Y] days\n- [SERVICE_2]: [X]-[Y] days\n- [SERVICE_3]: [X]-[Y] days\n- Timeline varies based on complexity\n\n=== FEATURED PROJECTS ===\n1. [PROJECT_1_NAME] - [PROJECT_1_DESC]: [PROJECT_1_URL]\n2. [PROJECT_2_NAME] - [PROJECT_2_DESC]: [PROJECT_2_URL]\n3. [PROJECT_3_NAME] - [PROJECT_3_DESC]: [PROJECT_3_URL]\n\n=== YOUR BEHAVIOR ===\n- Be warm, professional, and friendly\n- Greet the client by their first name on first message\n- Remember everything from the conversation history — never ask something already answered\n- Answer questions about yourself honestly using the info above\n- Collect client info step by step — do NOT ask multiple questions at once\n- Only move to the next question after the client answers the current one\n- Collect these 8 things in order:\n  1. Full name\n  2. Type of business they run\n  3. Type of service needed (Landing page, e-commerce, portfolio, React app, other)\n  4. Specific features needed (contact form, payment, admin panel, animations, etc)\n  5. Budget range in USD\n  6. Expected timeline or deadline\n  7. Email address\n  8. WhatsApp or phone number\n- After collecting all 8, say: Thank you [name]! I have everything I need. [YOUR_NICKNAME] will review your requirements and contact you within 24 hours. Looking forward to working with you!\n- If asked about pricing, give the range from above\n- If asked to see work, share relevant project links based on what they need\n- If asked something you do not know, say you will pass it directly to [YOUR_NICKNAME]\n- Never make promises you cannot keep\n- If client seems hesitant about budget, reassure them you are flexible and offer competitive rates\n- Speak in the language the client uses — if they write in another language, reply in that language\n- Keep responses concise and conversational — no long walls of text\n\nClient first name: {{$node[\"Extract Message\"].json[\"firstName\"]}}"
+        }
+      },
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [
+        -1632,
+        512
+      ],
+      "id": "fa14eab4-0f58-4015-b162-bb31f258d166"
+    },
+    {
+      "parameters": {
+        "sessionKey": "={{$node[\"Extract Message\"].json[\"sessionId\"]}}",
+        "contextWindowLength": 20
+      },
+      "name": "Conversation Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1,
+      "position": [
+        -1496,
+        736
+      ],
+      "id": "78a93d9f-bc13-4088-aec2-67c3c3aa5fa4"
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "aiReply",
+              "value": "={{$json[\"output\"]}}"
+            },
+            {
+              "name": "chatId",
+              "value": "={{$node[\"Extract Message\"].json[\"chatId\"]}}"
+            },
+            {
+              "name": "userMessage",
+              "value": "={{$node[\"Extract Message\"].json[\"userMessage\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Prepare Reply",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        -1280,
+        512
+      ],
+      "id": "c3c178d7-c120-440d-a72e-9402d0b28f63"
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json[\"chatId\"]}}",
+        "text": "={{$json[\"aiReply\"]}}",
+        "additionalFields": {}
+      },
+      "name": "Reply To Client",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        -1056,
+        608
+      ],
+      "id": "04dcd6c8-cdc2-42a4-b20f-38a86e2b3ce4",
+      "webhookId": "YOUR_REPLY_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "YOUR_TELEGRAM_BOT_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=YOUR_GEMINI_API_KEY",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"role\": \"user\",\n      \"parts\": [{\n        \"text\": \"Analyze this AI response and check if all 8 intake fields have been collected: full name, business type, service type, features, budget, timeline, email, phone.\\n\\nAI response: {{$node['Prepare Reply'].json['aiReply']}}\\n\\nUser message history context: {{$node['Prepare Reply'].json['userMessage']}}\\n\\nRespond ONLY in this exact JSON format with no extra text:\\n{ \\\"complete\\\": true, \\\"name\\\": \\\"\\\", \\\"business\\\": \\\"\\\", \\\"serviceType\\\": \\\"\\\", \\\"features\\\": \\\"\\\", \\\"budget\\\": \\\"\\\", \\\"timeline\\\": \\\"\\\", \\\"email\\\": \\\"\\\", \\\"phone\\\": \\\"\\\" }\\n\\nOnly set complete to true if ALL 8 fields are confirmed collected. Otherwise set complete to false.\"\n      }]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "name": "Check If Data Complete",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -1056,
+        416
+      ],
+      "id": "6e57a99b-0f95-449b-bbfe-45f1a1d97021"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"candidates\"][0][\"content\"][\"parts\"][0][\"text\"]}}",
+              "operation": "contains",
+              "value2": "\"complete\": true"
+            }
+          ]
+        }
+      },
+      "name": "Is Data Complete?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -832,
+        416
+      ],
+      "id": "b08d6b19-5553-4cb2-b6b5-c2c844527aac"
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "clientJson",
+              "value": "={{$json[\"candidates\"][0][\"content\"][\"parts\"][0][\"text\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Save Client Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        416
+      ],
+      "id": "59c44d29-38c5-487e-972f-d84561e00f85"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=YOUR_GEMINI_API_KEY",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"role\": \"user\",\n      \"parts\": [{\n        \"text\": \"Based on this client data, generate a professional Project Requirements Document (PRD).\\n\\nClient Data:\\n{{$node['Save Client Data'].json['clientJson']}}\\n\\nWrite a professional PRD with these sections:\\n1. Project Overview\\n2. Client Information\\n3. Project Scope\\n4. Features Required\\n5. Budget & Timeline\\n6. Technical Recommendations\\n7. Next Steps\"\n      }]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "name": "Generate PRD",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -384,
+        416
+      ],
+      "id": "b61353d3-96fe-4c0f-9516-5852b598f217"
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "prdText",
+              "value": "={{$json[\"candidates\"][0][\"content\"][\"parts\"][0][\"text\"]}}"
+            },
+            {
+              "name": "clientData",
+              "value": "={{$node[\"Save Client Data\"].json[\"clientJson\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Prepare Notification",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        416
+      ],
+      "id": "e1e9cadb-cd2a-4b00-8c49-125b5e52b472"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_PERSONAL_TELEGRAM_CHAT_ID",
+        "text": "=🚨 NEW CLIENT LEAD 🚨\n\n👤 CLIENT DATA:\n{{$json[\"clientData\"]}}\n\n━━━━━━━━━━━━━━━━━━━━\n📋 PRD:\n{{$json[\"prdText\"].substring(0, 3500)}}\n\n━━━━━━━━━━━━━━━━━━━━\n⚡ Reply ASAP — fast response wins the client!",
+        "additionalFields": {}
+      },
+      "name": "Notify You on Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        64,
+        416
+      ],
+      "id": "7997c305-216b-4a9b-8862-ca253ba0a0fb",
+      "webhookId": "YOUR_NOTIFY_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "YOUR_TELEGRAM_BOT_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-pro",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1624,
+        736
+      ],
+      "id": "f63d3902-7bcc-4b26-90be-6f9d766e4f97",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "YOUR_GEMINI_ACCOUNT_NAME"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Message": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Prepare Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Reply": {
+      "main": [
+        [
+          {
+            "node": "Reply To Client",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check If Data Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check If Data Complete": {
+      "main": [
+        [
+          {
+            "node": "Is Data Complete?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Data Complete?": {
+      "main": [
+        [
+          {
+            "node": "Save Client Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Client Data": {
+      "main": [
+        [
+          {
+            "node": "Generate PRD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate PRD": {
+      "main": [
+        [
+          {
+            "node": "Prepare Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Notification": {
+      "main": [
+        [
+          {
+            "node": "Notify You on Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversation Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "TEMPLATE_VERSION_1",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "YOUR_N8N_INSTANCE_ID"
+  },
+  "tags": []
+}
